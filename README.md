@@ -1,1 +1,222 @@
-# mssql-node-docker-demo-app
+# Overview
+
+This is a demo application created to show how  SQL Server can operate in a DevOps scenario where an application developer can checkin code to GitHub and then trigger a build in Red Hat Open Shift to deploy the changes automatically as pods (containers).  This demo was first shown at the Nordic Infrastructure Conference (NIC) 2017 in Oslo, Norway on Feb 3, 2017.  This demo application is notable for showing a few things:
+* A Dockerfile that builds in the tools like sqlcmd and bcp into the image because they are currently not part of the image.  Microsoft plans to make the tools part of the image in a future monthly release to obviate the need to do this in the Dockerfile.
+* An entrypoint CMD which executes a import-data.sh script at runtime to use sqlcmd to execute a .sql script to create a database and populate initial schema into it.
+* The import-data.sh script also uses bcp to bulk import the data found in the Products.csv file.
+* A simple node application that acts as a web service to get the data out of the SQL Server database using FOR JSON auto to automatically format the data into JSON and return it in the response.
+
+**IMPORTANT:** This project has been tested with SQL Server v.Next version CTP 1.2 (January 20, 2017 release).
+
+# Detailed Explanation
+Here's a detailed look at each of the files in the project.  
+
+## Dockerfile
+The Dockerfile defines how the image will be built.  Each of the commands in the Dockerfile is described below.
+
+The Dockerfile can define a base image as the first layer.  In this case, the Dockerfile uses the official Microsoft SQL Server Linux image that can be found on [Docker Hub](http://hub.docker.com/r/microsoft/mssql-server-linux).  The Dockerfile will pull the image with the 'latest' tag.  This image requires two environment variables to be passed to it at run time - `ACCEPT_EULA` and `SA_PASSWORD`.  The Microsoft SQL Server Linux inmage is in turn based on the official Ubuntu Linux image `Ubuntu:16.04`.
+
+```
+FROM microsoft/mssql-server-linux:latest
+```
+
+This RUN command will update all the installed packages in the image, install the curl utility if it is not already there and then install node.
+
+``` 
+RUN apt-get -y update  && \
+        apt-get install -y curl && \
+        curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
+        apt-get install -y nodejs
+```
+
+This series of RUN commands will register the Microsoft SQL Server tools repository configuration information and then install the SQL Server tools including sqlcmd and bcp which are used in this project.  Lastly two symlinks are created to the tools so that they can be executed without providing the full path to them.
+
+``` 
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+        curl https://packages.microsoft.com/config/ubuntu/16.04/prod.list | tee /etc/apt/sources.list.d/msprod.list && \
+        apt-get update && \
+        apt-get install -y mssql-tools && \
+        ln -sfn /opt/mssql-tools/bin/sqlcmd-13.0.1.0 /usr/bin/sqlcmd && \
+        ln -sfn /opt/mssql-tools/bin/bcp-13.0.1.0 /usr/bin/bcp
+```
+
+This RUN command sets the locale to en_US.UTF-8.  At least in my testing this was necessary to get bcp to read and import the .csv data file correctly.
+
+``` 
+RUN locale-gen en_US.UTF-8 && \
+        update-locale
+```
+
+This installs the tedious driver for SQL Server which allows node applications to connect to SQL Server and run SQL commands.  This is an open source project to which Microsoft is now one of the main contributors.
+
+[NPM package details](https://www.npmjs.com/package/tedious)
+
+[Source Code](https://github.com/tediousjs/tedious)
+
+```
+RUN npm install tedious
+```
+
+This RUN command creates a new directory _inside_ the container at /usr/src/app and then sets the working directory to that directory.
+
+``` 
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+```
+
+Then this command copies the package.json file from the source code in this project to the /usr/src/app directory _inside_ the container.  The RUN command npm install will install all the dependencies defined in the package.json file.
+
+```
+COPY package.json /usr/src/app/
+RUN npm install
+```
+
+Then all the source code from the project is copied into the container image in the /usr/src/app directory.
+```
+COPY . /usr/src/app
+```
+
+In order for the import-data.sh script to be executable you need to run the chmod command to add +x (execute) to the file.
+```
+RUN chmod +x /usr/src/app/import-data.sh
+```
+
+The EXPOSE command defines which port the application will be accessible at from outside the container.
+```
+EXPOSE 8080
+```
+
+Lastly, the CMD command defines what will be executed when the container starts.  In this case, it will execute the entrypoint.sh script contained in the source code for this project.  The souce code including the entrypoint.sh is contained in the /usr/src/app directory which has also been made the working directory by the commands above.
+```
+CMD /bin/bash ./entrypoint.sh
+```
+
+## entrypoint.sh
+The entrypoint.sh script is executed when the conatiner first starts.  The script kicks off three things _simultaneously_:
+* Start SQL Serevr using the sqlservr.sh script.  This script will look for the existence of the `ACCEPT_EULA` and `SA_PASSWORD` environment variables.  Since this will be teh first execution of SQL Server the SA password will be set and then the sqlservr process will be started.  Note: Sqlservr runs as a process inside of a container, _not_ as a daemon.
+* Executes the import-data.sh script contained in the source code of this project.  The import=data.sh script creates a database, populates the schema and imports some data.
+* Runs npm start which will start the node application.
+```
+/opt/mssql/bin/sqlservr.sh & /usr/src/app/import-data.sh & npm start 
+```
+
+## import-data.sh
+The import-data.sh script is a convenient way to delay the execution of the SQL commands until SQL Server is started.  Typically SQL Server takes about 5-10 seconds to start up and be ready for connections and commands.  Bringing the SQL commands into a separate .sh script from entrypoint.sh creates modularity betweent the commands that should be run at container start up time and the SQL commands that need to be run.  It also allow for the container start up commands to be run immediately and the SQL commands to be delayed.
+
+This command causes a wait to allow SQL Server to start up.  Nintey seconds is a bit excessive, but will ensure that even if there are extraordinary delays that the scripts will not execute until SQL Server is up.  For demo purposes you may want to reduce this number.
+```
+sleep 90s
+```
+
+The next command uses the SQL Server command line utiliity sqlcmd to execte some SQL commands contained in the setup.sql file.  The commands can also be passed directly to sqlcmd via the -q parameter.  For better readibility if you have lots of SQL commands, it's best to create a separate .sql file and put all the SQL commands in it. 
+
+**IMPORTANT:** Make sure to change your password here if you use something other than 'Yukon900'.
+
+```
+sqlcmd -S localhost -U sa -P Yukon900 -d master -i setup.sql
+```
+
+The setup.sql script will create a new database called `DemoData` and a table called `Products` in the default `dbo` schema.  This bcp command will import the data contained in the source code file Products.csv.
+**IMPORTANT:** If you change the names of the database or the table in the setup.sql script, make sure you change them here to.
+**IMPORTANT:** Make sure to change your password here if you use something other than 'Yukon900'.
+bcp DemoData.dbo.Products in "/usr/src/app/Products.csv" -c -t',' -S localhost -U sa -P Yukon900
+
+## setup.sql
+The setup.sql defines some simple commands to create a database and some simple schema.  You could use a .sql file like this for other purposes like creating logins, assigning permissions, creating stored procedures, and much more.  When creating a database in production situations, you will probably want to be more specific about where the database files are created so that the database files are stored in persistent storage.  This SQL script creates a table with two columns - ID (integer) and ProductName (nvarchar(max)).
+```
+CREATE DATABASE DemoData;
+GO
+USE DemoData;
+GO
+CREATE TABLE Products (ID int, ProductName nvarchar(max));
+GO
+```
+
+## Products.csv
+This CSV data file contains some sample data to populate the Products table.  It has two columns - ID and ProductName separated by a comma.  The bcp command in the import-data.sh script uses this file to import the data into the Products table created by the setup.sql script file.
+```
+1,Car
+2,Truck
+3,Motorcycle
+4,Bicycle
+5,Horse
+6,Boat
+7,Plane
+8,Scooter
+9,Gopher
+.... more data if you want ....
+```
+
+## server.js
+The server.js file defines the node application that exposes the web service and retrieves the data from SQL Server and returns it to the requestor as a JSON response.
+
+The requires statements at the top of the file bring in some libraries like tedious and express and define some global variables which can be used by the rest of the application.
+```
+var express = require("express");
+var app = express();
+var connection = require('tedious').Connection;
+var request = require('tedious').Request;
+```
+The app.get defines the _route_ for this application.  Any GET request that comes to the root of this application will be handled by this function.  This effectively creates a simple REST-style interface for returing data in JSON from a GET request.
+```
+app.get('/', function (req, res) {
+```
+
+The next set of commands defines the connection parameters and creates a connection object.
+
+**IMPORTANT:** Make sure to change your password here if you use something other than 'Yukon900'.
+
+**IMPORTANT:** If you change the names of the database in the setup.sql script, make sure you change it here to.
+```
+var config = {
+     userName: 'sa',
+     password: 'Yukon900', // update me
+     server: 'localhost',
+     options: {
+         database: 'DemoData'
+     }
+}
+var conn = new connection(config);
+```
+
+This next comamnd defines the event handler function for the connection.on event.
+```
+conn.on('connect', function(err) {
+```
+
+Assuming the connection is made correctly, the next command sets up the query that will be executed.  This uses SQL Server's built in JSON functions to retrieve the data in JSON format for us so we don't have to wrte code to convert the data from a traditional rowset into JSON. Nice!
+
+[More information on JSON in SQL server](https://msdn.microsoft.com/en-us/library/dn921897.aspx)
+
+```
+sqlreq = new request("SELECT * FROM Products FOR JSON AUTO", function(err, rowCount) {
+```
+
+The next set of commands sets up the event handler function for the sql request row command which will be triggered for each row in a response.  In this case there will only be a single row and a single column because we are using the FOR JSON AUTO to get the data returned in a single string of JSON data.   Assuming the request comes back with a row and a column value we simply return the JSON string (the column.value) directly to the browser in the response (res).
+```
+sqlreq.on('row', function(columns) { 
+   columns.forEach(function(column) {  
+      if (column.value === null) {  
+         console.log('NULL');
+      } else {  
+         res.send(column.value);
+      }  
+   });
+});
+```
+
+This is the command that actually sends in the SQL request:
+```
+conn.execSql(sqlreq); 
+```
+
+This command starts the app listening on port 8080.
+**IMPORTANT:** If you change the port number in the Dockerfile EXPOSE command make sure you change it here too.
+
+```
+var server = app.listen(8080, function () {
+    console.log("Listening on port %s...", server.address().port);
+});
+```
+
+# Setting up the Demo

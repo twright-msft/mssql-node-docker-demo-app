@@ -1,12 +1,34 @@
 # Overview
 
 This is a demo application created to show how  SQL Server can operate in a DevOps scenario where an application developer can checkin code to GitHub and then trigger a build in Red Hat Open Shift to deploy the changes automatically as pods (containers).  This demo was first shown at the Nordic Infrastructure Conference (NIC) 2017 in Oslo, Norway on Feb 3, 2017.  This demo application is notable for showing a few things:
-* A Dockerfile that builds in the tools like sqlcmd and bcp into the image because they are currently not part of the image.  Microsoft plans to make the tools part of the image in a future monthly release to obviate the need to do this in the Dockerfile.
 * An entrypoint CMD which executes a import-data.sh script at runtime to use sqlcmd to execute a .sql script to create a database and populate initial schema into it.
 * The import-data.sh script also uses bcp to bulk import the data found in the Products.csv file.
 * A simple node application that acts as a web service to get the data out of the SQL Server database using FOR JSON auto to automatically format the data into JSON and return it in the response.
 
-**IMPORTANT:** This project has been tested with SQL Server v.Next version CTP 1.2 (January 20, 2017 release).
+**IMPORTANT:** This project has been tested with SQL Server v.Next version CTP 1.4 (March 17, 2017 release).
+
+# Running the Demo
+First, create a folder on your host and then git clone this project into that folder:
+```
+git clone https://github.com/twright-msft/mssql-node-docker-demo-app.git
+```
+To run the demo you just need to build the container:
+```
+docker build -t node-web-app .
+```
+
+Then, you need to run the container:
+```
+docker run -e ACCEPT_EULA=Y -e SA_PASSWORD=Yukon900 -p 1433:1433 -p 8080:8080 -d node-web-app
+```
+Note: make sure that your password matches what is in the import-data.sh script.
+
+Then you can connect to the SQL Server in the container by running a tool on your host or you can docker exec into the container and run sqlcmd from inside the container.
+```
+docker exec -it <container name|ID> /bin/bash
+/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Yukon900
+```
+To show the web service response, open up a browser and point it to http://localhost:8080.
 
 # Detailed Explanation
 Here's a detailed look at each of the files in the project.  
@@ -27,24 +49,6 @@ RUN apt-get -y update  && \
         apt-get install -y curl && \
         curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
         apt-get install -y nodejs
-```
-
-This series of RUN commands will register the Microsoft SQL Server tools repository configuration information and then install the SQL Server tools including sqlcmd and bcp which are used in this project.  Lastly two symlinks are created to the tools so that they can be executed without providing the full path to them.
-
-``` 
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-        curl https://packages.microsoft.com/config/ubuntu/16.04/prod.list | tee /etc/apt/sources.list.d/msprod.list && \
-        apt-get update && \
-        apt-get install -y mssql-tools && \
-        ln -sfn /opt/mssql-tools/bin/sqlcmd-13.0.1.0 /usr/bin/sqlcmd && \
-        ln -sfn /opt/mssql-tools/bin/bcp-13.0.1.0 /usr/bin/bcp
-```
-
-This RUN command sets the locale to en_US.UTF-8.  At least in my testing this was necessary to get bcp to read and import the .csv data file correctly.
-
-``` 
-RUN locale-gen en_US.UTF-8 && \
-        update-locale
 ```
 
 This installs the tedious driver for SQL Server which allows node applications to connect to SQL Server and run SQL commands.  This is an open source project to which Microsoft is now one of the main contributors.
@@ -218,5 +222,3 @@ var server = app.listen(8080, function () {
     console.log("Listening on port %s...", server.address().port);
 });
 ```
-
-# Setting up the Demo

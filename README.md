@@ -8,6 +8,7 @@ This is a demo application created to show how  SQL Server can operate in a DevO
 **IMPORTANT:** This project has been tested with SQL Server v.Next version CTP 1.4 (March 17, 2017 release).
 
 # Running the Demo
+## Setting up the application and building the image for the first time
 First, create a folder on your host and then git clone this project into that folder:
 ```
 git clone https://github.com/twright-msft/mssql-node-docker-demo-app.git
@@ -29,6 +30,32 @@ docker exec -it <container name|ID> /bin/bash
 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Yukon900
 ```
 To show the web service response, open up a browser and point it to http://localhost:8080.
+
+Now that you have the demo application prepared, you can setup and configure OpenShift.
+
+## Setting up OpenShift
+For demo purposes, you can deploy an OpenShift environment into any major cloud provider using templates available in the marketplaces, you can use [OpenShift Online](https://www.openshift.com/features/), or you can deploy a Virtual Box-based OpenShift environment called [minishift](https://www.openshift.org/vm/) on your local development/demo machine.
+
+You will also need to get the `oc` commandline utility [installed](https://docs.openshift.org/latest/cli_reference/get_started_cli.html#installing-the-cli) on your host/demo machine.
+
+Once you have OpenShift set up and you have the oc command line utility installed, you need to login to your OpenShift environment as a cluster administrator, create a new project, and set the permissions to allow any user identity to run as root (required by the mssql user that runs the sqlservr.sh script in a container for now).
+
+```
+oc login
+oc new-project demo
+oadm policy add-scc-to-user anyuid -z default
+```
+Now that you have OpenShift set up, you are ready to do an initial test run of deploying into OpenShift.
+
+## Deploying into OpenShift
+
+At a terminal prompt in the root of the application folder enter this command:
+```
+oc new-app .
+```
+
+That will deploy the app into OpenShift.  You can now log into OpenShift and see a few artifacts:
+* 
 
 # Detailed Explanation
 Here's a detailed look at each of the files in the project.  

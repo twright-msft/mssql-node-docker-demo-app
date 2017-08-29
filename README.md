@@ -249,3 +249,19 @@ var server = app.listen(8080, function () {
     console.log("Listening on port %s...", server.address().port);
 });
 ```
+
+CREATING DOCKER IMAGE OF MSSQL SERVER WITH SEEDED DB:
+
+So far, the steps have mentioned about how to create a docker image of sqlserver that starts seeding on first run.
+However, if we have a huge database to be seeded, the setup.sql shall infact contain all the 
+CREATE/INSERT SQL statements that are needed for seeding our sqlserver. We do not have to import it from csv file, if 
+need be.
+
+In that case, after trying to run using docker, we can commit the newly running container with seeded db as
+new image using "docker commit" command.
+docker commit <container_id> <docker image tag>
+
+We could now use this new image in a new docker based project, might be even in
+docker-compose.yml file.
+
+Also node.js dependency shall be removed in this case.

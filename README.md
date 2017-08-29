@@ -250,18 +250,15 @@ var server = app.listen(8080, function () {
 });
 ```
 
-CREATING DOCKER IMAGE OF MSSQL SERVER WITH SEEDED DB:
+## Alternative approach using SQL scripts for seeding schema and data
 
-So far, the steps have mentioned about how to create a docker image of sqlserver that starts seeding on first run.
-However, if we have a huge database to be seeded, the setup.sql shall infact contain all the 
-CREATE/INSERT SQL statements that are needed for seeding our sqlserver. We do not have to import it from csv file, if 
-need be.
+So far, the steps above have described  how to create a docker image of sqlserver that starts seeding on first run.
+However, if we have a huge database to be seeded, the setup.sql could  contain all the 
+CREATE/INSERT SQL statements that are needed for seeding the database. We do not have to import it from csv file.
 
-In that case, after trying to run using docker, we can commit the newly running container with seeded db as
-new image using "docker commit" command.
+You could either add the CREATE/INSERT statements to setup.sql and have those run each time a container is created or you can create a new image that has the schema and data captured inside of it.  In that case, after starting a new container and executing the .sql script, we can commit the newly running container with seeded db as a new image using "docker commit" command.
 docker commit <container_id> <docker image tag>
 
-We could now use this new image in a new docker based project, might be even in
-docker-compose.yml file.
+We could now use this new image in a new docker based project including in a Docker Compose app using a docker-compose.yml file.
 
-Also node.js dependency shall be removed in this case.
+Also node.js dependency can be removed in this case.  Node.js is only used here as an example web service to show the data can be retrieved from the SQL Server.

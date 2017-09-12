@@ -124,22 +124,22 @@ CMD /bin/bash ./entrypoint.sh
 
 ## entrypoint.sh
 The entrypoint.sh script is executed when the conatiner first starts.  The script kicks off three things _simultaneously_:
-* Start SQL Serevr using the sqlservr.sh script.  This script will look for the existence of the `ACCEPT_EULA` and `SA_PASSWORD` environment variables.  Since this will be teh first execution of SQL Server the SA password will be set and then the sqlservr process will be started.  Note: Sqlservr runs as a process inside of a container, _not_ as a daemon.
-* Executes the import-data.sh script contained in the source code of this project.  The import=data.sh script creates a database, populates the schema and imports some data.
+* Start SQL Serevr using the sqlservr.sh script.  This script will look for the existence of the `ACCEPT_EULA` and `SA_PASSWORD` environment variables.  Since this will be the first execution of SQL Server the SA password will be set and then the sqlservr process will be started.  Note: Sqlservr runs as a process inside of a container, _not_ as a daemon.
+* Executes the import-data.sh script contained in the source code of this project.  The import-data.sh script creates a database, populates the schema and imports some data.
 * Runs npm start which will start the node application.
 ```
 /opt/mssql/bin/sqlservr.sh & /usr/src/app/import-data.sh & npm start 
 ```
 
 ## import-data.sh
-The import-data.sh script is a convenient way to delay the execution of the SQL commands until SQL Server is started.  Typically SQL Server takes about 5-10 seconds to start up and be ready for connections and commands.  Bringing the SQL commands into a separate .sh script from entrypoint.sh creates modularity betweent the commands that should be run at container start up time and the SQL commands that need to be run.  It also allow for the container start up commands to be run immediately and the SQL commands to be delayed.
+The import-data.sh script is a convenient way to delay the execution of the SQL commands until SQL Server is started.  Typically SQL Server takes about 5-10 seconds to start up and be ready for connections and commands.  Bringing the SQL commands into a separate .sh script from entrypoint.sh creates modularity between the commands that should be run at container start up time and the SQL commands that need to be run.  It also allow for the container start up commands to be run immediately and the SQL commands to be delayed.
 
 This command causes a wait to allow SQL Server to start up.  Nintey seconds is a bit excessive, but will ensure that even if there are extraordinary delays that the scripts will not execute until SQL Server is up.  For demo purposes you may want to reduce this number.
 ```
 sleep 90s
 ```
 
-The next command uses the SQL Server command line utiliity sqlcmd to execte some SQL commands contained in the setup.sql file.  The commands can also be passed directly to sqlcmd via the -q parameter.  For better readibility if you have lots of SQL commands, it's best to create a separate .sql file and put all the SQL commands in it. 
+The next command uses the SQL Server command line utility sqlcmd to execte some SQL commands contained in the setup.sql file.  The commands can also be passed directly to sqlcmd via the -q parameter.  For better readibility if you have lots of SQL commands, it's best to create a separate .sql file and put all the SQL commands in it. 
 
 **IMPORTANT:** Make sure to change your password here if you use something other than 'Yukon900'.
 
@@ -148,9 +148,12 @@ sqlcmd -S localhost -U sa -P Yukon900 -d master -i setup.sql
 ```
 
 The setup.sql script will create a new database called `DemoData` and a table called `Products` in the default `dbo` schema.  This bcp command will import the data contained in the source code file Products.csv.
-**IMPORTANT:** If you change the names of the database or the table in the setup.sql script, make sure you change them here to.
+**IMPORTANT:** If you change the names of the database or the table in the setup.sql script, make sure you change them here too.
 **IMPORTANT:** Make sure to change your password here if you use something other than 'Yukon900'.
+
+```
 bcp DemoData.dbo.Products in "/usr/src/app/Products.csv" -c -t',' -S localhost -U sa -P Yukon900
+```
 
 ## setup.sql
 The setup.sql defines some simple commands to create a database and some simple schema.  You could use a .sql file like this for other purposes like creating logins, assigning permissions, creating stored procedures, and much more.  When creating a database in production situations, you will probably want to be more specific about where the database files are created so that the database files are stored in persistent storage.  This SQL script creates a table with two columns - ID (integer) and ProductName (nvarchar(max)).
@@ -181,7 +184,7 @@ This CSV data file contains some sample data to populate the Products table.  It
 ## server.js
 The server.js file defines the node application that exposes the web service and retrieves the data from SQL Server and returns it to the requestor as a JSON response.
 
-The requires statements at the top of the file bring in some libraries like tedious and express and define some global variables which can be used by the rest of the application.
+The require statements at the top of the file bring in some libraries like tedious and express and define some global variables which can be used by the rest of the application.
 ```
 var express = require("express");
 var app = express();
@@ -193,7 +196,7 @@ The app.get defines the _route_ for this application.  Any GET request that come
 app.get('/', function (req, res) {
 ```
 
-The next set of commands defines the connection parameters and creates a connection object.
+The next set of commands define the connection parameters and creates a connection object.
 
 **IMPORTANT:** Make sure to change your password here if you use something other than 'Yukon900'.
 
@@ -215,7 +218,7 @@ This next comamnd defines the event handler function for the connection.on event
 conn.on('connect', function(err) {
 ```
 
-Assuming the connection is made correctly, the next command sets up the query that will be executed.  This uses SQL Server's built in JSON functions to retrieve the data in JSON format for us so we don't have to wrte code to convert the data from a traditional rowset into JSON. Nice!
+Assuming the connection is made correctly, the next command sets up the query that will be executed.  This uses SQL Server's built in JSON functions to retrieve the data in JSON format for us so we don't have to write code to convert the data from a traditional rowset into JSON. Nice!
 
 [More information on JSON in SQL server](https://msdn.microsoft.com/en-us/library/dn921897.aspx)
 
@@ -223,7 +226,7 @@ Assuming the connection is made correctly, the next command sets up the query th
 sqlreq = new request("SELECT * FROM Products FOR JSON AUTO", function(err, rowCount) {
 ```
 
-The next set of commands sets up the event handler function for the sql request row command which will be triggered for each row in a response.  In this case there will only be a single row and a single column because we are using the FOR JSON AUTO to get the data returned in a single string of JSON data.   Assuming the request comes back with a row and a column value we simply return the JSON string (the column.value) directly to the browser in the response (res).
+The next set of commands set up the event handler function for the sql request row command which will be triggered for each row in a response.  In this case there will only be a single row and a single column because we are using `FOR JSON AUTO` to get the data returned in a single string of JSON data.   Assuming the request comes back with a row and a column value we simply return the JSON string (the column.value) directly to the browser in the response (res).
 ```
 sqlreq.on('row', function(columns) { 
    columns.forEach(function(column) {  
@@ -252,13 +255,15 @@ var server = app.listen(8080, function () {
 
 ## Alternative approach using SQL scripts for seeding schema and data
 
-So far, the steps above have described  how to create a docker image of sqlserver that starts seeding on first run.
-However, if we have a huge database to be seeded, the setup.sql could  contain all the 
+So far, the steps above have described how to create a docker image of sqlserver that starts seeding on first run.
+However, if we have a huge database to be seeded, the setup.sql could contain all the 
 CREATE/INSERT SQL statements that are needed for seeding the database. We do not have to import it from csv file.
 
 You could either add the CREATE/INSERT statements to setup.sql and have those run each time a container is created or you can create a new image that has the schema and data captured inside of it.  In that case, after starting a new container and executing the .sql script, we can commit the newly running container with seeded db as a new image using "docker commit" command.
+```
 docker commit <container_id> <docker image tag>
+```
 
 We could now use this new image in a new docker based project including in a Docker Compose app using a docker-compose.yml file.
 
-Also node.js dependency can be removed in this case.  Node.js is only used here as an example web service to show the data can be retrieved from the SQL Server.
+Also node.js dependency can be removed in this case. Node.js is only used here as an example web service to show the data can be retrieved from the SQL Server.

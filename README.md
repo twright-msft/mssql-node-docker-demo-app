@@ -123,7 +123,7 @@ CMD /bin/bash ./entrypoint.sh
 ```
 
 ## entrypoint.sh
-The entrypoint.sh script is executed when the conatiner first starts.  The script kicks off three things _simultaneously_:
+The entrypoint.sh script is executed when the container first starts.  The script kicks off three things _simultaneously_:
 * Start SQL Serevr using the sqlservr.sh script.  This script will look for the existence of the `ACCEPT_EULA` and `SA_PASSWORD` environment variables.  Since this will be the first execution of SQL Server the SA password will be set and then the sqlservr process will be started.  Note: Sqlservr runs as a process inside of a container, _not_ as a daemon.
 * Executes the import-data.sh script contained in the source code of this project.  The import-data.sh script creates a database, populates the schema and imports some data.
 * Runs npm start which will start the node application.

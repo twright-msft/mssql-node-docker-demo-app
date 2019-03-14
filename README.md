@@ -63,7 +63,7 @@ Here's a detailed look at each of the files in the project.
 ## Dockerfile
 The Dockerfile defines how the image will be built.  Each of the commands in the Dockerfile is described below.
 
-The Dockerfile can define a base image as the first layer.  In this case, the Dockerfile uses the official Microsoft SQL Server Linux image that can be found on [Docker Hub](http://hub.docker.com/r/microsoft/mssql-server-linux).  The Dockerfile will pull the image with the 'latest' tag.  This image requires two environment variables to be passed to it at run time - `ACCEPT_EULA` and `SA_PASSWORD`.  The Microsoft SQL Server Linux inmage is in turn based on the official Ubuntu Linux image `Ubuntu:16.04`.
+The Dockerfile can define a base image as the first layer.  In this case, the Dockerfile uses the official Microsoft SQL Server Linux image that can be found on [Docker Hub](http://hub.docker.com/r/microsoft/mssql-server-linux).  The Dockerfile will pull the image with the 'latest' tag.  This image requires two environment variables to be passed to it at run time - `ACCEPT_EULA` and `SA_PASSWORD`.  The Microsoft SQL Server Linux image is in turn based on the official Ubuntu Linux image `Ubuntu:16.04`.
 
 ```
 FROM microsoft/mssql-server-linux:latest

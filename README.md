@@ -134,7 +134,7 @@ The entrypoint.sh script is executed when the container first starts.  The scrip
 ## import-data.sh
 The import-data.sh script is a convenient way to delay the execution of the SQL commands until SQL Server is started.  Typically SQL Server takes about 5-10 seconds to start up and be ready for connections and commands.  Bringing the SQL commands into a separate .sh script from entrypoint.sh creates modularity between the commands that should be run at container start up time and the SQL commands that need to be run.  It also allow for the container start up commands to be run immediately and the SQL commands to be delayed.
 
-This command causes a wait to allow SQL Server to start up.  Nintey seconds is a bit excessive, but will ensure that even if there are extraordinary delays that the scripts will not execute until SQL Server is up.  For demo purposes you may want to reduce this number.
+This command causes a wait to allow SQL Server to start up.  Ninety seconds is a bit excessive, but will ensure that even if there are extraordinary delays that the scripts will not execute until SQL Server is up.  For demo purposes you may want to reduce this number.
 ```
 sleep 90s
 ```

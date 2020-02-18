@@ -6,20 +6,24 @@ var request = require('tedious').Request;
 app.get('/', function (req, res) {
     //set up the connection information
     var config = {
-        userName: 'sa',
-        password: 'Yukon900', // update me
         server: 'localhost',
-        options: {
-            database: 'DemoData'
+        authentication: {
+            type: 'default',
+            options: {
+                userName: 'sa',
+                password: 'Yukon900', // update me
+                database: 'DemoData' // doesn't seem to work?
+	    },
         }
-    }
+    };
+
     var conn = new connection(config);
 
     conn.on('connect', function(err) {
         if (err) {
             console.log(err);
         } else {
-            sqlreq = new request("SELECT * FROM Products FOR JSON AUTO", function(err, rowCount) {
+            sqlreq = new request("SELECT * FROM DemoData.dbo.Products FOR JSON AUTO", function(err, rowCount) {
                 if (err) {
                     console.log(err);
                 }

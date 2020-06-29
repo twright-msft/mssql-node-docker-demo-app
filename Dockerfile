@@ -21,8 +21,11 @@ RUN npm install
 COPY . /usr/src/app
 
 # Grant permissions for the import-data script to be executable
+USER root
 RUN chmod +x /usr/src/app/import-data.sh
 
 EXPOSE 8080
 
+# Switch back to mssql user and run the entrypoint script
+USER mssql
 CMD /bin/bash ./entrypoint.sh

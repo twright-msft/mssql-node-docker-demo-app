@@ -69,9 +69,10 @@ The Dockerfile can define a base image as the first layer.  In this case, the Do
 FROM microsoft/mssql-server-linux:latest
 ```
 
-This RUN command will update all the installed packages in the image, install the curl utility if it is not already there and then install node.
+This RUN command will update all the installed packages in the image, install the curl utility if it is not already there and then install node.  This command must be run with sudo privileges so the user is switched to root.
 
 ```Dockerfile
+USER root
 RUN apt-get -y update  && \
         apt-get install -y curl && \
         curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
@@ -107,9 +108,8 @@ Then all the source code from the project is copied into the container image in 
 COPY . /usr/src/app
 ```
 
-In order for the import-data.sh script to be executable you need to run the chmod command as root to add +x (execute) to the file.
+In order for the import-data.sh script to be executable you need to run the chmod command to add +x (execute) to the file.
 ```Dockerfile
-USER root
 RUN chmod +x /usr/src/app/import-data.sh
 ```
 

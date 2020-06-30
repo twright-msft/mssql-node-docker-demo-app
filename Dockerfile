@@ -1,5 +1,8 @@
 FROM microsoft/mssql-server-linux:latest
 
+# Switch to root user for access to apt-get install
+USER root
+
 # Install node/npm
 RUN apt-get -y update  && \
         apt-get install -y curl && \
@@ -21,7 +24,6 @@ RUN npm install
 COPY . /usr/src/app
 
 # Grant permissions for the import-data script to be executable
-USER root
 RUN chmod +x /usr/src/app/import-data.sh
 
 EXPOSE 8080

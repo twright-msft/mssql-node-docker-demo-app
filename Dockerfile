@@ -1,5 +1,8 @@
 FROM microsoft/mssql-server-linux:latest
 
+# Switch to root user for access to apt-get install
+USER root
+
 # Install node/npm
 RUN apt-get -y update  && \
         apt-get install -y curl && \
@@ -28,4 +31,6 @@ RUN chmod +x /usr/src/app/import-data.sh
 
 EXPOSE 8080
 
+# Switch back to mssql user and run the entrypoint script
+USER mssql
 CMD /bin/bash ./entrypoint.sh

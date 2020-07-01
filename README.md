@@ -65,13 +65,14 @@ The Dockerfile defines how the image will be built.  Each of the commands in the
 
 The Dockerfile can define a base image as the first layer.  In this case, the Dockerfile uses the official Microsoft SQL Server Linux image that can be found on [Docker Hub](http://hub.docker.com/r/microsoft/mssql-server-linux).  The Dockerfile will pull the image with the 'latest' tag.  This image requires two environment variables to be passed to it at run time - `ACCEPT_EULA` and `SA_PASSWORD`.  The Microsoft SQL Server Linux image is in turn based on the official Ubuntu Linux image `Ubuntu:16.04`.
 
-```
+```Dockerfile
 FROM microsoft/mssql-server-linux:latest
 ```
 
-This RUN command will update all the installed packages in the image, install the curl utility if it is not already there and then install node.
+This RUN command will update all the installed packages in the image, install the curl utility if it is not already there and then install node.  This command must be run with sudo privileges so the user is switched to root.
 
-``` 
+```Dockerfile
+USER root
 RUN apt-get -y update  && \
         apt-get install -y curl && \
         curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
@@ -84,41 +85,42 @@ This installs the tedious driver for SQL Server which allows node applications t
 
 [Source Code](https://github.com/tediousjs/tedious)
 
-```
+```Dockerfile
 RUN npm install tedious
 ```
 
 This RUN command creates a new directory _inside_ the container at /usr/src/app and then sets the working directory to that directory.
 
-``` 
+```Dockerfile
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 ```
 
 Then this command copies the package.json file from the source code in this project to the /usr/src/app directory _inside_ the container.  The RUN command npm install will install all the dependencies defined in the package.json file.
 
-```
+```Dockerfile
 COPY package.json /usr/src/app/
 RUN npm install
 ```
 
 Then all the source code from the project is copied into the container image in the /usr/src/app directory.
-```
+```Dockerfile
 COPY . /usr/src/app
 ```
 
 In order for the import-data.sh script to be executable you need to run the chmod command to add +x (execute) to the file.
-```
+```Dockerfile
 RUN chmod +x /usr/src/app/import-data.sh
 ```
 
 The EXPOSE command defines which port the application will be accessible at from outside the container.
-```
+```Dockerfile
 EXPOSE 8080
 ```
 
-Lastly, the CMD command defines what will be executed when the container starts.  In this case, it will execute the entrypoint.sh script contained in the source code for this project.  The souce code including the entrypoint.sh is contained in the /usr/src/app directory which has also been made the working directory by the commands above.
-```
+Lastly, the CMD command defines what will be executed when the container starts.  In this case, it will execute the entrypoint.sh script contained in the source code for this project.  The souce code including the entrypoint.sh is contained in the /usr/src/app directory which has also been made the working directory by the commands above.  The user is also switched back to the `mssql` user for security reasons.
+```Dockerfile
+USER mssql
 CMD /bin/bash ./entrypoint.sh
 ```
 

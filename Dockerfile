@@ -1,4 +1,4 @@
-FROM microsoft/mssql-server-linux:latest
+FROM mcr.microsoft.com/mssql/server
 
 # Switch to root user for access to apt-get install
 USER root
@@ -6,7 +6,7 @@ USER root
 # Install node/npm
 RUN apt-get -y update  && \
         apt-get install -y curl && \
-        curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
+        curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
         apt-get install -y nodejs && \
         apt-get install -y dos2unix
 
@@ -33,4 +33,4 @@ EXPOSE 8080
 
 # Switch back to mssql user and run the entrypoint script
 USER mssql
-CMD /bin/bash ./entrypoint.sh
+ENTRYPOINT /bin/bash ./entrypoint.sh

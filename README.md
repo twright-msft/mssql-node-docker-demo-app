@@ -1,6 +1,6 @@
 # Overview
 
-This is a demo application created to show how  SQL Server can operate in a DevOps scenario where an application developer can checkin code to GitHub and then trigger a build in Red Hat Open Shift to deploy the changes automatically as pods (containers).  This demo was first shown at the Nordic Infrastructure Conference (NIC) 2017 in Oslo, Norway on Feb 3, 2017.  This demo application is notable for showing a few things:
+This is a demo application created to show how  SQL Server can operate in a DevOps scenario where an application developer can check in code to GitHub and then trigger a build in Red Hat Open Shift to deploy the changes automatically as pods (containers).  This demo was first shown at the Nordic Infrastructure Conference (NIC) 2017 in Oslo, Norway on Feb 3, 2017.  This demo application is notable for showing a few things:
 * An entrypoint CMD which executes a import-data.sh script at runtime to use sqlcmd to execute a .sql script to create a database and populate initial schema into it.
 * The import-data.sh script also uses bcp to bulk import the data found in the Products.csv file.
 * A simple node application that acts as a web service to get the data out of the SQL Server database using FOR JSON auto to automatically format the data into JSON and return it in the response.
@@ -259,11 +259,11 @@ So far, the steps above have described how to create a docker image of sqlserver
 However, if we have a huge database to be seeded, the setup.sql could contain all the 
 CREATE/INSERT SQL statements that are needed for seeding the database. We do not have to import it from csv file.
 
-You could either add the CREATE/INSERT statements to setup.sql and have those run each time a container is created or you can create a new image that has the schema and data captured inside of it.  In that case, after starting a new container and executing the .sql script, we can commit the newly running container with seeded db as a new image using "docker commit" command.
+You can either add the CREATE/INSERT statements to setup.sql and have those run each time a container is created or you can create a new image that has the schema and data captured inside of it.  In that case, after starting a new container and executing the .sql script, we can commit the newly running container with seeded db as a new image using "docker commit" command.
 ```
 docker commit <container_id> <docker image tag>
 ```
 
-We could now use this new image in a new docker based project including in a Docker Compose app using a docker-compose.yml file.
+We can now use this new image in a new docker based project including in a Docker Compose app using a docker-compose.yml file.
 
 Also node.js dependency can be removed in this case. Node.js is only used here as an example web service to show the data can be retrieved from the SQL Server.

@@ -8,6 +8,8 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.13.3"
+    "express": "^4.13.3",
+    "mssql": "^3.3.0",
+    "tedious": "^9.2.1"
   }
 }

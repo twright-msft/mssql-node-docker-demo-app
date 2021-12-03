@@ -3,6 +3,9 @@ FROM mcr.microsoft.com/mssql/server
 # Switch to root user for access to apt-get install
 USER root
 
+# Helpful aliases
+RUN echo 'alias ll='"'"'ls $LS_OPTIONS -al'"'"'' >> /etc/bash.bashrc 
+
 # Install node/npm
 RUN apt-get -y update  && \
         apt-get install -y curl && \
